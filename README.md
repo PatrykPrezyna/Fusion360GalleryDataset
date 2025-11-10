@@ -86,3 +86,15 @@ As part of the dataset we provide various tools for working with the data. These
 
 ## License
 Please refer to the [dataset license](LICENSE.md).
+
+
+## Patryks readme
+* you can find the data here: https://github.com/AutodeskAILab/Fusion360GalleryDataset/tree/master/tools/assembly_download
+
+1) run: conda create --name pyoccenv python=3.11
+
+2) run: conda activate pyoccenv
+
+3) Copy selected parts and the "assembly.json" into the mains forder 
+
+4) run: python create_assembly
