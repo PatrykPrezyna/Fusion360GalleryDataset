@@ -9,8 +9,8 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from typing import Dict, Any, Tuple
 
 # --- Configuration ---
-ASSEMBLY_JSON_FILE = 'assembly.json'
-OUTPUT_IMAGE_FILE = "full_json_assembly_view.png"
+ASSEMBLY_JSON_FILE = 'input_data/assembly.json'
+OUTPUT_IMAGE_FILE = "output_data/full_json_assembly_view.png"
 ROOT_COLOR = 'RED'
 PART_COLORS = ['GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA'] 
 
@@ -101,7 +101,7 @@ def create_and_display_assembly():
         step_path = body_id_to_path.get(uid)
         if step_path:
             # Assumes step files are in the same folder as the script/json
-            shape = read_step_file(step_path) 
+            shape = read_step_file("input_data/" + step_path) 
             if shape:
                 loaded_shapes[uid] = shape
             else:

@@ -91,10 +91,19 @@ Please refer to the [dataset license](LICENSE.md).
 ## Patryks readme
 * you can find the data here: https://github.com/AutodeskAILab/Fusion360GalleryDataset/tree/master/tools/assembly_download
 
+0) install conda
+
 1) run: conda create --name pyoccenv python=3.11
 
 2) run: conda activate pyoccenv
 
-3) Copy selected parts and the "assembly.json" into the mains forder 
+3) Copy selected parts and the "assembly.json" into the input_data folder 
 
-4) run: python create_assembly
+4) run: python create_assembly.py
+
+5) run: 
+
+alternative 
+1) python3 -m venv myvenv
+2) source myenv/bin/activate
+alternative 
