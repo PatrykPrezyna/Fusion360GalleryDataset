@@ -101,9 +101,6 @@ Please refer to the [dataset license](LICENSE.md).
 
 4) run: python create_assembly.py
 
-5) run: 
+5) run: python read_STEP.py
 
-alternative 
-1) python3 -m venv myvenv
-2) source myenv/bin/activate
-alternative 
+

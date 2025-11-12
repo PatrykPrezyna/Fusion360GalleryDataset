@@ -7,8 +7,8 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform # Required for movi
 import math # Needed for converting degrees to radians
 
 # --- Configuration ---
-path_to_file_1 = '257ba290-05aa-11ec-9425-065da05e55cf.step' 
-path_to_file_2 = '257c8cde-05aa-11ec-bd3c-065da05e55cf.step' 
+path_to_file_1 = '../a1.0.0_00/7778_3a9748b3/6c6b3efe-0600-11ec-8bba-020dc2b44123.step'
+path_to_file_2 = 'input_data/257c8cde-05aa-11ec-bd3c-065da05e55cf.step' 
 
 output_image_file = "parameterized_assembly_view.png"
 PART1_COLOR = 'RED'
@@ -60,7 +60,7 @@ def create_and_display_assembly():
     # Define how Part 2 should be positioned relative to Part 1 (at origin)
     
     # Movement (X, Y, Z)
-    TRANSLATION_X = 150.0  # Move 150 units along X for clear separation
+    TRANSLATION_X = 10.0  # Move 150 units along X for clear separation
     TRANSLATION_Y = 0.0
     TRANSLATION_Z = 0.0
 
