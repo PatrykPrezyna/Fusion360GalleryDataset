@@ -1,6 +1,9 @@
 import os
+import sys
+import json
 import random
 import math
+import argparse
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Display.SimpleGui import init_display
 from OCC.Core.gp import gp_Trsf, gp_Ax1, gp_Dir, gp_Pnt
@@ -49,24 +52,43 @@ def process_step_file(step_path, out_folder):
         except Exception as e:
             print(f"Error exporting image: {e}")
     display.EraseAll()
-    # Close viewer only once all files processed
-    # display.Close()
 
-def main(input_folder):
-    input_folder = os.path.abspath(input_folder)
-    output_folder = os.path.join("output_data", os.path.basename(input_folder))
-    os.makedirs(output_folder, exist_ok=True)
-    step_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.step')]
-    if not step_files:
-        print("No STEP files found.")
+def main(indexes):
+    # Load JSON file (assume "picture_info.json" in script directory)
+    json_path = os.path.join(os.path.dirname(__file__), "picture_info.json")
+    if not os.path.exists(json_path):
+        print(f"JSON file not found: {json_path}")
         return
-    for step_file in step_files:
-        process_step_file(os.path.join(input_folder, step_file), output_folder)
-    print(f"All images saved to {output_folder}")
+    with open(json_path, "r") as f:
+        data = json.load(f)
+    for index in indexes:
+        entry = next((item for item in data if item['index'] == index), None)
+        if not entry:
+            print(f"No entry with index {index} in JSON.")
+            continue
+        # Always drop the filename
+        parent_folder = os.path.dirname(entry["file_path"])
+        parent_folder_name = os.path.basename(parent_folder)
+        # Check if path is directory or single file
+        if os.path.isdir(parent_folder):
+            step_files = [os.path.join(parent_folder, f) for f in os.listdir(parent_folder) if f.lower().endswith('.step')]
+        elif parent_folder.lower().endswith('.step'):
+            step_files = [parent_folder]
+        else:
+            print(f"Path is neither a directory nor a STEP file: {parent_folder}")
+            continue
+        output_folder = os.path.join("output_data", parent_folder_name)
+        os.makedirs(output_folder, exist_ok=True)
+        if not step_files:
+            print("No STEP files found.")
+            continue
+        for step_file in step_files:
+            process_step_file(step_file, output_folder)
+        print(f"All images saved to {output_folder}")
 
 if __name__ == '__main__':
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <folder_with_step_files>")
-    else:
-        main(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Process STEP files by index")
+    parser.add_argument("-i", "--indexes", nargs="+", type=int, default=[2, 9, 14, 40, 65, 68, 82, 119, 142, 144, 182, 220, 217, 230, 228, 236, 239, 270, 322, 362, 386, 405, 447, 486, 528, 598, 632, 713],
+                        help="Indexes in picture_info.json")
+    args = parser.parse_args()
+    main(args.indexes)
