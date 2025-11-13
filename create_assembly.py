@@ -9,7 +9,8 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from typing import Dict, Any, Tuple
 
 # --- Configuration ---
-# ASSEMBLY_JSON_FILE = '../a1.0.0_00/7780_6c885e81/assembly.json'
+#ASSEMBLY_JSON_FILE = '../a1.0.0_00/7780_6c885e81/assembly.json'
+#ASSEMBLY_JSON_FILE = '../a1.0.0_09/133131_b8201f91/assembly.json'
 ROOT = '../a1.0.0_00/20520_7e357152/' #21329_1bfecd1d
 ASSEMBLY_JSON_FILE = ROOT + 'assembly.json'
 OUTPUT_IMAGE_FILE = "output_data/full_json_assembly_view.png"
