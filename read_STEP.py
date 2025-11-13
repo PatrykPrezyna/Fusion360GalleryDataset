@@ -7,7 +7,7 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform # Required for movi
 import math # Needed for converting degrees to radians
 
 # --- Configuration ---
-path_to_file_1 = '../a1.0.0_00/7778_3a9748b3/6c6b3efe-0600-11ec-8bba-020dc2b44123.step'
+path_to_file_1 = 'input_data/a1.0.0_00/7778_3a9748b3/6c6b3efe-0600-11ec-8bba-020dc2b44123.step'
 path_to_file_2 = 'input_data/257c8cde-05aa-11ec-bd3c-065da05e55cf.step' 
 
 output_image_file = "parameterized_assembly_view.png"
