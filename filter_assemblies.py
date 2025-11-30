@@ -87,6 +87,6 @@ if __name__ == "__main__":
     output_path = "composite_annotated.png"
     info_path = "picture_info.json"
     category = "Mechanical Engineering"
-    max_bodies = 2
+    max_bodies = 3
     assemblies_info = find_assemblies(root_dir, category, max_bodies)
     create_composite(assemblies_info, output_path, info_path)

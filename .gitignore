@@ -5,5 +5,5 @@ __pycache__/
 .env
 input
 myenv
-/output_data
+/output_data*
 /input_data

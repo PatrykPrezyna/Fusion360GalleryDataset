@@ -97,6 +97,9 @@ Please refer to the [dataset license](LICENSE.md).
 
 1) run: conda activate pyoccenv
 
+conda install -c conda-forge pythonocc-core
+
+
 4) run: python create_assembly.py
 
 5) run: python read_STEP.py
@@ -104,3 +107,14 @@ Please refer to the [dataset license](LICENSE.md).
 
 
 
+python -m venv myenv
+open command prompt not power shell
+.\myenv\Scripts\activate
+
+
+# create a compatible env (example: Python 3.10)
+conda create -n fusion-occ -c conda-forge python=3.10 pythonocc-core
+conda activate fusion-occ
+
+# then install the rest of your deps (without pythonocc-core in requirements.txt)
+pip install -r requirements.txt

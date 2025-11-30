@@ -63,6 +63,8 @@ pip-tools
 pkginfo
 platformdirs
 pluggy
+torch
+torchvision
 pycparser
 pydantic
 pydantic_core

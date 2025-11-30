@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple
 
 # --- Configuration ---
 # Change these paths as needed, 
-ROOT = 'input_data/a1.0.0_00/20520_7e357152/' #21329_1bfecd1d
+ROOT = 'input_data/a1.0.0_08/132115_a79f0f66/' #21329_1bfecd1d
 ASSEMBLY_JSON_FILE = ROOT + 'assembly.json'
 OUTPUT_IMAGE_FILE = "output_data/full_json_assembly_view.png"
 ROOT_COLOR = 'RED'
