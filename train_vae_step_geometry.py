@@ -6,7 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 from torch import nn, optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
@@ -186,11 +186,34 @@ def train_step_vae(
     lr: float = 1e-3,
     latent_dim: int = 32,
     num_points: int = 512,
+    train_fraction: float = 0.8,
+    split_seed: int = 42,
 ):
     os.makedirs(out_dir, exist_ok=True)
 
     dataset = AssemblyStepDataset(json_path, num_points=num_points)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+
+    # Create train / test split
+    total_len = len(dataset)
+    train_len = int(total_len * train_fraction)
+    test_len = total_len - train_len
+    if train_len == 0 or test_len == 0:
+        raise ValueError(
+            f"Invalid train/test split with train_fraction={train_fraction}: "
+            f"train_len={train_len}, test_len={test_len} for total_len={total_len}"
+        )
+
+    generator = torch.Generator().manual_seed(split_seed)
+    train_dataset, test_dataset = random_split(
+        dataset, [train_len, test_len], generator=generator
+    )
+
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=0
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = PointCloudVAE(num_points=num_points, latent_dim=latent_dim).to(device)
@@ -198,8 +221,8 @@ def train_step_vae(
 
     for epoch in range(1, epochs + 1):
         model.train()
-        total_loss = 0.0
-        for x, _ in dataloader:
+        total_train_loss = 0.0
+        for x, _ in train_loader:
             # x: (B, num_points, 3) -> flatten
             x = x.view(x.size(0), -1).to(device)
             optimizer.zero_grad()
@@ -207,10 +230,26 @@ def train_step_vae(
             loss = vae_loss(recon, x, mu, logvar)
             loss.backward()
             optimizer.step()
-            total_loss += loss.item()
+            total_train_loss += loss.item()
 
-        avg_loss = total_loss / len(dataset)
-        print(f"[STEP VAE] Epoch {epoch}/{epochs} - loss per sample: {avg_loss:.4f}")
+        avg_train_loss = total_train_loss / train_len
+
+        # Evaluate on test split
+        model.eval()
+        total_test_loss = 0.0
+        with torch.no_grad():
+            for x, _ in test_loader:
+                x = x.view(x.size(0), -1).to(device)
+                recon, mu, logvar = model(x)
+                loss = vae_loss(recon, x, mu, logvar)
+                total_test_loss += loss.item()
+
+        avg_test_loss = total_test_loss / test_len
+        print(
+            f"[STEP VAE] Epoch {epoch}/{epochs} - "
+            f"train loss per sample: {avg_train_loss:.4f} - "
+            f"test loss per sample: {avg_test_loss:.4f}"
+        )
 
     # Save model
     model_path = os.path.join(out_dir, "pointcloud_vae.pt")
@@ -221,8 +260,9 @@ def train_step_vae(
     model.eval()
     all_indices: List[int] = []
     all_latents: List[torch.Tensor] = []
+    full_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
     with torch.no_grad():
-        for x, idxs in dataloader:
+        for x, idxs in full_loader:
             x = x.view(x.size(0), -1).to(device)
             mu, logvar = model.encode(x)
             z = mu  # use mean as deterministic embedding
@@ -282,6 +322,15 @@ def main():
         description="Train a simple VAE on STEP geometry (point clouds) for assemblies from picture_info.json and compute embeddings."
     )
     parser.add_argument(
+        "--output-folder",
+        type=str,
+        default=".",
+        help=(
+            "Base folder that contains the data JSON and where outputs will be written. "
+            "If --json-path or --out-dir are relative, they are resolved against this."
+        ),
+    )
+    parser.add_argument(
         "--json-path",
         type=str,
         default="picture_info.json",
@@ -291,24 +340,42 @@ def main():
         "--out-dir",
         type=str,
         default=os.path.join("output_data", "step_vae_embeddings"),
-        help="Directory to save model and embeddings.",
+        help="Directory (relative to --output-folder, if not absolute) to save model and embeddings.",
     )
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--latent-dim", type=int, default=32)
     parser.add_argument("--num-points", type=int, default=512)
+    parser.add_argument(
+        "--train-fraction",
+        type=float,
+        default=0.8,
+        help="Fraction of data to use for training (remainder used for testing).",
+    )
 
     args = parser.parse_args()
 
+    # Resolve paths relative to output-folder if they are not absolute
+    base_folder = args.output_folder
+
+    json_path = args.json_path
+    if not os.path.isabs(json_path):
+        json_path = os.path.join(base_folder, json_path)
+
+    out_dir = args.out_dir
+    if not os.path.isabs(out_dir):
+        out_dir = os.path.join(base_folder, out_dir)
+
     train_step_vae(
-        json_path=args.json_path,
-        out_dir=args.out_dir,
+        json_path=json_path,
+        out_dir=out_dir,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
         latent_dim=args.latent_dim,
         num_points=args.num_points,
+        train_fraction=args.train_fraction,
     )
 
 

@@ -84,5 +84,35 @@ Please cite the relevant paper below if you use the Fusion 360 Gallery dataset i
 As part of the dataset we provide various tools for working with the data. These tools leverage the [Fusion 360 API](http://help.autodesk.com/view/fusion360/ENU/?guid=GUID-7B5A90C8-E94C-48DA-B16B-430729B734DC) to perform operations such as geometry reconstruction, traversing B-Rep data structures, and conversion to other formats. More information can be found in the [tools directory](tools).
 
 
+## Example: Training the STEP geometry VAE
+
+To train the STEP-based VAE on assembly geometry and write embeddings, you can run:
+
+```bash
+python train_vae_step_geometry.py ^
+  --output-folder C:\path\to\project_root ^
+  --json-path picture_info.json ^
+  --out-dir output_data\step_vae_embeddings ^
+  --epochs 20 ^
+  --batch-size 16 ^
+  --lr 1e-3 ^
+  --latent-dim 32 ^
+  --num-points 512 ^
+  --train-fraction 0.8
+```
+
+All arguments:
+
+- `--output-folder`: **Base folder** that contains the data JSON and where outputs will be written. Relative paths below are resolved against this.
+- `--json-path`: Path (absolute or relative to `--output-folder`) to `picture_info.json` that lists assemblies.
+- `--out-dir`: Directory (absolute or relative to `--output-folder`) where the model and embeddings are saved.
+- `--epochs`: Number of training epochs.
+- `--batch-size`: Batch size for training and evaluation.
+- `--lr`: Learning rate for the Adam optimizer.
+- `--latent-dim`: Dimension of the VAE latent space.
+- `--num-points`: Number of points sampled per STEP mesh for the point cloud representation.
+- `--train-fraction`: Fraction of the dataset used for training (the remainder is used as a held-out test set each epoch).
+
+
 ## License
 Please refer to the [dataset license](LICENSE.md).

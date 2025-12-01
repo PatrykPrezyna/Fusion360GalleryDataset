@@ -104,6 +104,7 @@ typing_extensions
 urllib3
 virtualenv
 wrapt
-zipp
-pythonocc-core      
+zipp     
 matplotlib
+torch
+torchvision

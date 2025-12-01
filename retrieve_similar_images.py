@@ -146,8 +146,9 @@ def display_retrieval_results(query_image_path: str, results: list, save_path: s
             
             ax = fig.add_subplot(gs[0, idx])
             ax.imshow(img)
-            ax.set_title(f"#{idx}\n{os.path.basename(img_path)}\nSimilarity: {similarity:.3f}", 
-                        fontsize=10, pad=5)
+            # Show only rank and similarity, not the filename
+            ax.set_title(f"#{idx}\nSimilarity: {similarity:.3f}",
+                         fontsize=10, pad=5)
             ax.axis('off')
         except Exception as e:
             print(f"Warning: Could not load image {img_path}: {e}")

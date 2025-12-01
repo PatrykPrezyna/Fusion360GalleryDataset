@@ -11,13 +11,15 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 import glob
 import argparse
+import json
+import shutil
 from typing import List, Tuple
 from pathlib import Path
 
 from PIL import Image
 import torch
 from torch import nn, optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as T
 import numpy as np
 
@@ -146,18 +148,38 @@ def train_vae(
     latent_dim: int = 128,
     image_size: int = 128,
     beta: float = 1.0,
+    train_split: float = 0.8,
 ):
-    """Train the VAE on images from the folder."""
+    """Train the VAE on images from the folder with a train/test split.
+
+    After training and embedding extraction, test images are moved to a
+    `test` subfolder under `folder_path`, and an `info.json` file with
+    training parameters is written to `output_dir`.
+    """
     os.makedirs(output_dir, exist_ok=True)
     
-    # Create dataset and dataloader
+    # Create full dataset
     dataset = ImageFolderDataset(folder_path, image_size=image_size)
-    dataloader = DataLoader(
-        dataset, 
-        batch_size=batch_size, 
-        shuffle=True, 
+    
+    # Split into train and test subsets
+    train_size = int(train_split * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
         num_workers=0,
-        pin_memory=True if torch.cuda.is_available() else False
+        pin_memory=True if torch.cuda.is_available() else False,
+    )
+    
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True if torch.cuda.is_available() else False,
     )
     
     # Setup device and model
@@ -167,16 +189,17 @@ def train_vae(
     model = ConvVAE(latent_dim=latent_dim, image_size=image_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
-    print(f"Training VAE with {len(dataset)} images...")
+    print(f"Training VAE with {train_size} images (train), {test_size} images (test)...")
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
     
     # Training loop
     for epoch in range(1, epochs + 1):
         model.train()
-        total_loss = 0.0
-        num_batches = 0
+        total_train_loss = 0.0
+        num_train_batches = 0
         
-        for x, _ in dataloader:
+        # Training phase
+        for x, _ in train_loader:
             x = x.to(device)
             optimizer.zero_grad()
             
@@ -186,11 +209,23 @@ def train_vae(
             loss.backward()
             optimizer.step()
             
-            total_loss += loss.item()
-            num_batches += 1
+            total_train_loss += loss.item()
+            num_train_batches += 1
         
-        avg_loss = total_loss / len(dataset)
-        print(f"Epoch {epoch}/{epochs} - Average loss: {avg_loss:.4f}")
+        avg_train_loss = total_train_loss / train_size
+        
+        # Evaluation on test set
+        model.eval()
+        total_test_loss = 0.0
+        with torch.no_grad():
+            for x, _ in test_loader:
+                x = x.to(device)
+                recon, mu, logvar = model(x)
+                loss = vae_loss(recon, x, mu, logvar, beta=beta)
+                total_test_loss += loss.item()
+        
+        avg_test_loss = total_test_loss / max(test_size, 1)
+        print(f"Epoch {epoch}/{epochs} - Train loss: {avg_train_loss:.4f} - Test loss: {avg_test_loss:.4f}")
     
     # Save model
     model_path = os.path.join(output_dir, "vae_model.pt")
@@ -207,8 +242,17 @@ def train_vae(
     all_embeddings = []
     all_paths = []
     
+    # Use a full-dataset loader (no shuffling) for embeddings
+    full_loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True if torch.cuda.is_available() else False,
+    )
+
     with torch.no_grad():
-        for x, paths in dataloader:
+        for x, paths in full_loader:
             x = x.to(device)
             mu, logvar = model.encode(x)
             z = mu  # Use mean as deterministic embedding for retrieval
@@ -216,7 +260,34 @@ def train_vae(
             all_paths.extend(paths)
     
     embeddings = torch.cat(all_embeddings, dim=0)
-    
+
+    # Move test images to a dedicated subfolder for future runs/organization
+    test_indices_set = set(getattr(test_dataset, "indices", []))
+    test_dir = os.path.join(folder_path, "test")
+    if len(test_indices_set) > 0:
+        os.makedirs(test_dir, exist_ok=True)
+        for idx in test_indices_set:
+            try:
+                src = dataset.image_paths[idx]
+            except IndexError:
+                # Should not happen, but guard anyway
+                continue
+            filename = os.path.basename(src)
+            dst = os.path.join(test_dir, filename)
+            # Avoid moving if already in the right place
+            if os.path.abspath(src) == os.path.abspath(dst):
+                continue
+            try:
+                shutil.move(src, dst)
+            except Exception as e:
+                print(f"Warning: could not move {src} to {dst}: {e}")
+
+        # Update paths to reflect new test locations
+        for i, old_path in enumerate(all_paths):
+            if i in test_indices_set:
+                filename = os.path.basename(old_path)
+                all_paths[i] = os.path.join(test_dir, filename)
+
     # Save embeddings and paths
     emb_path = os.path.join(output_dir, "embeddings.pt")
     paths_path = os.path.join(output_dir, "image_paths.txt")
@@ -225,10 +296,31 @@ def train_vae(
     with open(paths_path, 'w') as f:
         for path in all_paths:
             f.write(f"{path}\n")
-    
+
+    # Save training configuration/info
+    info = {
+        "folder_path": folder_path,
+        "output_dir": output_dir,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": lr,
+        "latent_dim": latent_dim,
+        "image_size": image_size,
+        "beta": beta,
+        "train_split": train_split,
+        "train_size": train_size,
+        "test_size": test_size,
+        "device": str(device),
+        "test_subfolder": test_dir if len(test_indices_set) > 0 else None,
+    }
+    info_path = os.path.join(output_dir, "info.json")
+    with open(info_path, "w") as f:
+        json.dump(info, f, indent=4)
+
     print(f"Saved embeddings to {emb_path}")
     print(f"Saved image paths to {paths_path}")
     print(f"Embedding shape: {embeddings.shape}")
+    print(f"Saved training info to {info_path}")
     
     return model, embeddings, all_paths
 
@@ -324,8 +416,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="vae_retrieval_output",
-        help="Directory to save model and embeddings"
+        default=None,
+        help="Directory to save model and embeddings (default: same as --folder)"
     )
     parser.add_argument("--epochs", type=int, default=30, help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
@@ -333,19 +425,30 @@ def main():
     parser.add_argument("--latent-dim", type=int, default=128, help="Latent dimension")
     parser.add_argument("--image-size", type=int, default=128, help="Image size (square)")
     parser.add_argument("--beta", type=float, default=1.0, help="KL divergence weight")
+    parser.add_argument(
+        "--train-split",
+        type=float,
+        default=0.8,
+        help="Fraction of data used for training (rest is test)",
+    )
     
     args = parser.parse_args()
+    
+    # If no explicit output directory is given, use the input folder so that
+    # the model and embeddings are saved alongside the images.
+    output_dir = args.output_dir if args.output_dir is not None else args.folder
     
     # Train the VAE
     model, embeddings, image_paths = train_vae(
         folder_path=args.folder,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
         latent_dim=args.latent_dim,
         image_size=args.image_size,
         beta=args.beta,
+        train_split=args.train_split,
     )
     
     print("\n" + "="*50)
