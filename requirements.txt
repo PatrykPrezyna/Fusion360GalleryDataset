@@ -59,6 +59,7 @@ numpy
 packaging
 pathspec
 pillow
+matplotlib
 pip-tools
 pkginfo
 platformdirs
@@ -104,3 +105,5 @@ urllib3
 virtualenv
 wrapt
 zipp
+pythonocc-core      
+matplotlib
