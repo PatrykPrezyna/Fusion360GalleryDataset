@@ -3,6 +3,11 @@ Simple Variational Autoencoder for Image Retrieval
 
 This script trains a VAE on images from a folder and provides functionality
 to retrieve similar images based on their latent representations.
+
+The model is designed to be orientation-invariant through:
+1. Data augmentation during training: random rotations (0-360°) and flips
+2. Test-time augmentation during retrieval: query images are tested with
+   multiple orientations and embeddings are averaged for more robust matching
 """
 
 import os
@@ -27,7 +32,7 @@ import numpy as np
 class ImageFolderDataset(Dataset):
     """Dataset that loads all PNG images from a folder."""
     
-    def __init__(self, folder_path: str, image_size: int = 128):
+    def __init__(self, folder_path: str, image_size: int = 128, augment: bool = False):
         self.folder_path = folder_path
         self.image_paths = sorted(glob.glob(os.path.join(folder_path, "*.png")))
         
@@ -36,10 +41,19 @@ class ImageFolderDataset(Dataset):
         
         print(f"Found {len(self.image_paths)} images in {folder_path}")
         
-        self.transform = T.Compose([
-            T.Resize((image_size, image_size)),
-            T.ToTensor(),  # Converts to [0,1] range
-        ])
+        # Base transforms
+        base_transforms = [T.Resize((image_size, image_size))]
+        
+        # Add augmentation for training
+        if augment:
+            base_transforms.extend([
+                T.RandomRotation(degrees=360),  # Full rotation (0-360 degrees)
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomVerticalFlip(p=0.5),
+            ])
+        
+        base_transforms.append(T.ToTensor())  # Converts to [0,1] range
+        self.transform = T.Compose(base_transforms)
     
     def __len__(self) -> int:
         return len(self.image_paths)
@@ -149,22 +163,27 @@ def train_vae(
     image_size: int = 128,
     beta: float = 1.0,
     train_split: float = 0.8,
+    use_augmentation: bool = True,
 ):
     """Train the VAE on images from the folder with a train/test split.
 
     After training and embedding extraction, test images are moved to a
     `test` subfolder under `folder_path`, and an `info.json` file with
     training parameters is written to `output_dir`.
+    
+    By default, data augmentation (rotations and flips) is applied during
+    training to improve orientation invariance.
     """
     os.makedirs(output_dir, exist_ok=True)
     
-    # Create full dataset
-    dataset = ImageFolderDataset(folder_path, image_size=image_size)
+    # Create datasets - training set with optional augmentation, full dataset without for embedding extraction
+    train_base_dataset = ImageFolderDataset(folder_path, image_size=image_size, augment=use_augmentation)
+    full_dataset = ImageFolderDataset(folder_path, image_size=image_size, augment=False)
     
     # Split into train and test subsets
-    train_size = int(train_split * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    train_size = int(train_split * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+    train_dataset, test_dataset = random_split(train_base_dataset, [train_size, test_size])
     
     train_loader = DataLoader(
         train_dataset,
@@ -242,9 +261,9 @@ def train_vae(
     all_embeddings = []
     all_paths = []
     
-    # Use a full-dataset loader (no shuffling) for embeddings
+    # Use a full-dataset loader (no shuffling) for embeddings - use non-augmented dataset
     full_loader = DataLoader(
-        dataset,
+        full_dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=0,
@@ -268,7 +287,7 @@ def train_vae(
         os.makedirs(test_dir, exist_ok=True)
         for idx in test_indices_set:
             try:
-                src = dataset.image_paths[idx]
+                src = full_dataset.image_paths[idx]
             except IndexError:
                 # Should not happen, but guard anyway
                 continue
@@ -312,6 +331,7 @@ def train_vae(
         "test_size": test_size,
         "device": str(device),
         "test_subfolder": test_dir if len(test_indices_set) > 0 else None,
+        "use_augmentation": use_augmentation,
     }
     info_path = os.path.join(output_dir, "info.json")
     with open(info_path, "w") as f:
@@ -326,98 +346,29 @@ def train_vae(
 
 
 def load_model_and_embeddings(output_dir: str, device: str = "cpu"):
-    """Load trained model and scan folder for all PNG images, extracting embeddings on-the-fly.
-    
-    This function scans the output_dir folder for all PNG images and extracts embeddings
-    dynamically, instead of using a saved list of paths.
-    
-    Args:
-        output_dir: Directory containing the trained model and images
-        device: Device to run model on
-    
-    Returns:
-        model: Loaded VAE model
-        embeddings: Extracted embeddings for all images found in folder
-        image_paths: List of paths to all PNG images found in folder
-    """
+    """Load trained model and embeddings."""
     model_path = os.path.join(output_dir, "vae_model.pt")
+    emb_path = os.path.join(output_dir, "embeddings.pt")
+    paths_path = os.path.join(output_dir, "image_paths.txt")
     
     # Load model
     checkpoint = torch.load(model_path, map_location=device)
-    latent_dim = checkpoint['latent_dim']
-    image_size = checkpoint['image_size']
-    
     model = ConvVAE(
-        latent_dim=latent_dim,
-        image_size=image_size
+        latent_dim=checkpoint['latent_dim'],
+        image_size=checkpoint['image_size']
     )
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
     
-    # Scan folder for all PNG images
-    print(f"Scanning folder for images: {output_dir}")
-    image_paths = []
+    # Load embeddings
+    embeddings = torch.load(emb_path, map_location=device)
     
-    # Scan for PNG files in the folder and subdirectories
-    for root, dirs, files in os.walk(output_dir):
-        # Skip hidden directories
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
-        for file in files:
-            if file.lower().endswith('.png'):
-                full_path = os.path.join(root, file)
-                # Normalize path
-                full_path = os.path.normpath(full_path)
-                if full_path not in image_paths:
-                    image_paths.append(full_path)
+    # Load paths
+    with open(paths_path, 'r') as f:
+        image_paths = [line.strip() for line in f.readlines()]
     
-    image_paths = sorted(image_paths)
-    
-    if len(image_paths) == 0:
-        raise ValueError(f"No PNG images found in {output_dir}")
-    
-    print(f"Found {len(image_paths)} images in folder")
-    
-    # Extract embeddings for all images found in folder
-    print("Extracting embeddings for all images...")
-    transform = T.Compose([
-        T.Resize((image_size, image_size)),
-        T.ToTensor(),
-    ])
-    
-    all_embeddings = []
-    valid_image_paths = []  # Track paths for successfully loaded images
-    batch_size = 32
-    
-    with torch.no_grad():
-        for i in range(0, len(image_paths), batch_size):
-            batch_paths = image_paths[i:i+batch_size]
-            batch_images = []
-            batch_valid_paths = []
-            
-            for img_path in batch_paths:
-                try:
-                    img = Image.open(img_path).convert("RGB")
-                    x = transform(img)
-                    batch_images.append(x)
-                    batch_valid_paths.append(img_path)
-                except Exception as e:
-                    print(f"Warning: Could not load image {img_path}: {e}")
-                    continue
-            
-            if len(batch_images) > 0:
-                batch_tensor = torch.stack(batch_images).to(device)
-                mu, _ = model.encode(batch_tensor)
-                all_embeddings.append(mu.cpu())
-                valid_image_paths.extend(batch_valid_paths)
-    
-    if len(all_embeddings) == 0:
-        raise ValueError("No valid images found or embeddings extracted")
-    
-    embeddings = torch.cat(all_embeddings, dim=0)
-    print(f"Extracted embeddings for {len(valid_image_paths)} images. Embedding shape: {embeddings.shape}")
-    
-    return model, embeddings, valid_image_paths
+    return model, embeddings, image_paths
 
 
 def retrieve_similar_images(
@@ -428,26 +379,64 @@ def retrieve_similar_images(
     top_k: int = 5,
     device: str = "cpu",
     image_size: int = 128,
+    use_tta: bool = True,
 ) -> List[Tuple[str, float]]:
     """
     Retrieve the top_k most similar images to the query image.
     
+    Uses test-time augmentation (TTA) by default to handle different orientations:
+    - Original image
+    - 90, 180, 270 degree rotations
+    - Horizontal and vertical flips
+    - Combinations of rotations and flips
+    
     Returns list of (image_path, similarity_score) tuples.
     """
-    # Load and preprocess query image
-    transform = T.Compose([
+    # Load query image
+    query_img = Image.open(query_image_path).convert("RGB")
+    
+    # Base transform
+    base_transform = T.Compose([
         T.Resize((image_size, image_size)),
         T.ToTensor(),
     ])
     
-    query_img = Image.open(query_image_path).convert("RGB")
-    query_tensor = transform(query_img).unsqueeze(0).to(device)
+    # Test-time augmentation: create multiple views of the query image
+    query_embeddings = []
     
-    # Encode query image
-    model.eval()
-    with torch.no_grad():
-        mu, _ = model.encode(query_tensor)
-        query_embedding = mu  # Use mean as embedding
+    if use_tta:
+        # Generate multiple augmented views
+        augmentations = [
+            lambda img: img,  # Original
+            lambda img: img.rotate(90),
+            lambda img: img.rotate(180),
+            lambda img: img.rotate(270),
+            lambda img: img.transpose(Image.FLIP_LEFT_RIGHT),  # Horizontal flip
+            lambda img: img.transpose(Image.FLIP_TOP_BOTTOM),  # Vertical flip
+            lambda img: img.rotate(90).transpose(Image.FLIP_LEFT_RIGHT),
+            lambda img: img.rotate(90).transpose(Image.FLIP_TOP_BOTTOM),
+            lambda img: img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT),
+            lambda img: img.rotate(270).transpose(Image.FLIP_LEFT_RIGHT),
+        ]
+        
+        for aug_fn in augmentations:
+            aug_img = aug_fn(query_img)
+            query_tensor = base_transform(aug_img).unsqueeze(0).to(device)
+            
+            model.eval()
+            with torch.no_grad():
+                mu, _ = model.encode(query_tensor)
+                query_embeddings.append(mu)
+        
+        # Average embeddings from all augmentations
+        query_embedding = torch.stack(query_embeddings).mean(dim=0)
+    else:
+        # No augmentation - use original image only
+        query_tensor = base_transform(query_img).unsqueeze(0).to(device)
+        model.eval()
+        with torch.no_grad():
+            mu, _ = model.encode(query_tensor)
+            query_embedding = mu
     
     # Normalize embeddings for cosine similarity
     embeddings_norm = embeddings / (embeddings.norm(dim=1, keepdim=True) + 1e-8)
@@ -460,13 +449,10 @@ def retrieve_similar_images(
     topk_values, topk_indices = torch.topk(similarities, k=min(top_k + 1, len(image_paths)))
     
     results = []
-    query_path_norm = os.path.normpath(query_image_path)
-    
     for val, idx in zip(topk_values, topk_indices):
         path = image_paths[idx.item()]
-        path_norm = os.path.normpath(path)
-        # Skip if it's the same image (using normalized paths for comparison)
-        if path_norm == query_path_norm:
+        # Skip if it's the same image
+        if path == query_image_path:
             continue
         results.append((path, val.item()))
         if len(results) >= top_k:
@@ -503,6 +489,11 @@ def main():
         default=0.8,
         help="Fraction of data used for training (rest is test)",
     )
+    parser.add_argument(
+        "--no-augment",
+        action="store_true",
+        help="Disable data augmentation during training (not recommended)",
+    )
     
     args = parser.parse_args()
     
@@ -521,6 +512,7 @@ def main():
         image_size=args.image_size,
         beta=args.beta,
         train_split=args.train_split,
+        use_augmentation=not args.no_augment,
     )
     
     print("\n" + "="*50)

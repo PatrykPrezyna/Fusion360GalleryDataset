@@ -17,7 +17,6 @@ This section provides step-by-step instructions to set up and use this repositor
    ```bash
    conda create -n fusion360 -c conda-forge python=3.10 pythonocc-core -y
    conda activate fusion360
-   <!-- conda activate fusion-occ -->
    ```
 
 2. **Install Python dependencies:**
@@ -68,7 +67,7 @@ To work with assembly data, download the dataset using the provided tool:
 
 ## Usage
 
-### Create a data set
+### (optional) Create a data set
 
 
 - **Quick example:**
@@ -82,7 +81,18 @@ python "rotate_STEP_and save_png_all.py" -n 5 --output-folder "output_data/iso_5
 python "rotate_STEP_and save_png_all.py" -n 5 --category "Mechanical Engineering" --output-folder "output_data/iso_500_mechanical"
 ```
 
-### Train the VAE
+```bash
+# Process STEP files from a custom input folder (default is "input_data")
+python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2/new"
+```
+
+**Parameters:**
+- `-n, --num-parts`: Maximum number of STEP files (parts) to process. If omitted, all found STEP files are processed.
+- `-o, --output-folder`: Output folder to save the images (default: `"output_data"`)
+- `-i, --input-folder`: Input folder containing STEP files (default: `"input_data"`)
+- `-c, --category`: Optional category filter (e.g., 'Mechanical Engineering'). If specified, only processes STEP files from assemblies with this category. If omitted, all STEP files are processed.
+
+### (optional) Train the VAE
 
 - **Quick example:**
 ```bash
@@ -112,7 +122,7 @@ After training, use the model to find similar images:
 
 - **Quick example:**
 ```bash
-python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\iso_5\test\51a00400-0573-11ec-9601-06368d9f66a5_isometric_00.png" --output-dir "output_data\iso_5" --top-k 5
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\2c419f18-05b8-11ec-916a-061e4e83ef1b_isometric_00.png.png" --output-dir "output_data\iso_5" --top-k 5
 ```
 
 - **Usage example:**
@@ -121,7 +131,7 @@ python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\ou
 ```
 
 ```bash
- C:\sources\Fusion360GalleryDataset>python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\iso_10000_mechanical\test\0cff56ee-053e-11ec-b49c-02ef91e90f5f_isometric_00.png" --output-dir "output_data/iso_10000_mechanical" --top-k 10 
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\2cf4c2de-05b8-11ec-8876-061e4e83ef1b_left_10_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10 
  ```
 
 
@@ -131,54 +141,14 @@ python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\ou
 - `--top-k`: Number of similar images to retrieve (default: 5)
 
 
-___
+Here are some test you might want to do:
 
-## Troubleshooting
-
-### OpenMP Error on Windows
-
-If you encounter an OpenMP error like:
-```
-OMP: Error #15: Initializing libomp.dll, but found libiomp5md.dll already initialized.
-```
-
-This is already handled in the scripts by setting `KMP_DUPLICATE_LIB_OK=TRUE`. If you still see this error, you can manually set it:
-
-**Windows (Command Prompt):**
-```cmd
-set KMP_DUPLICATE_LIB_OK=TRUE
-python train_vae_image_retrieval.py
-```
-
-**Windows (PowerShell):**
-```powershell
-$env:KMP_DUPLICATE_LIB_OK="TRUE"
-python train_vae_image_retrieval.py
-```
-
-**Linux/Mac:**
+0) You can use this script to rotete the query images
 ```bash
-export KMP_DUPLICATE_LIB_OK=TRUE
-python train_vae_image_retrieval.py
+python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2/new"
 ```
 
-### CUDA/GPU Issues
-
-The scripts automatically detect and use GPU if available. To force CPU usage, modify the device selection in the scripts or set:
-```python
-device = torch.device("cpu")
-```
-
-### Missing Dependencies
-
-If you encounter import errors, ensure all dependencies are installed:
+1) Than you can test the score for each of them and document 
 ```bash
-pip install -r requirements.txt
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10
 ```
-
-For `pythonocc-core` (required for STEP file processing), use conda:
-```bash
-conda install -c conda-forge pythonocc-core
-```
-
-

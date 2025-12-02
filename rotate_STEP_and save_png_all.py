@@ -20,21 +20,21 @@ STANDARD_ROTATIONS = [
     ([], "isometric"),                           # Isometric view (no rotation - default view)
     # Standard orthogonal views - all six sides
     # Note: "front" is the same as isometric (default view), so we use orthogonal rotations for other sides
-    ([(90, gp_Dir(0, 1, 0))], "left"),           # Left side: rotate 90° around Y-axis
-    ([(180, gp_Dir(0, 1, 0))], "back"),          # Back view: rotate 180° around Y-axis
-    ([(270, gp_Dir(0, 1, 0))], "right"),         # Right side: rotate 270° around Y-axis
-    ([(90, gp_Dir(1, 0, 0))], "top"),            # Top view: rotate 90° around X-axis
-    ([(270, gp_Dir(1, 0, 0))], "bottom"),        # Bottom view: rotate 270° around X-axis
-    # Oblique/angled views for better visualization
-    ([(45, gp_Dir(0, 1, 0))], "front_left"),     # Between front and left: 45° around Y-axis
-    ([(135, gp_Dir(0, 1, 0))], "back_left"),     # Between back and left: 135° around Y-axis
-    ([(225, gp_Dir(0, 1, 0))], "back_right"),    # Between back and right: 225° around Y-axis
-    ([(315, gp_Dir(0, 1, 0))], "front_right"),   # Between front and right: 315° around Y-axis
-    # Isometric views with compound rotations (standard isometric: 45° horizontal + ~35° vertical)
-    ([(45, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_1"),  # Standard isometric
-    ([(135, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_2"), # Isometric from back-left
-    ([(225, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_3"), # Isometric from back-right
-    ([(315, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_4"), # Isometric from front-right
+    ([(30, gp_Dir(1, 1, 1))], "left_10_degre_x_zero_y"),           # Left side: rotate 90° around Y-axis
+    # ([(180, gp_Dir(0, 1, 0))], "back"),          # Back view: rotate 180° around Y-axis
+    # ([(270, gp_Dir(0, 1, 0))], "right"),         # Right side: rotate 270° around Y-axis
+    # ([(90, gp_Dir(1, 0, 0))], "top"),            # Top view: rotate 90° around X-axis
+    # ([(270, gp_Dir(1, 0, 0))], "bottom"),        # Bottom view: rotate 270° around X-axis
+    # # Oblique/angled views for better visualization
+    # ([(45, gp_Dir(0, 1, 0))], "front_left"),     # Between front and left: 45° around Y-axis
+    # ([(135, gp_Dir(0, 1, 0))], "back_left"),     # Between back and left: 135° around Y-axis
+    # ([(225, gp_Dir(0, 1, 0))], "back_right"),    # Between back and right: 225° around Y-axis
+    # ([(315, gp_Dir(0, 1, 0))], "front_right"),   # Between front and right: 315° around Y-axis
+    # # Isometric views with compound rotations (standard isometric: 45° horizontal + ~35° vertical)
+    # ([(45, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_1"),  # Standard isometric
+    # ([(135, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_2"), # Isometric from back-left
+    # ([(225, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_3"), # Isometric from back-right
+    # ([(315, gp_Dir(0, 1, 0)), (35.264, gp_Dir(1, 0, 0))], "isometric_4"), # Isometric from front-right
 ]
 
 def rotate_shape(shape, rotation_steps):
@@ -127,7 +127,7 @@ def process_step_file(step_path, out_folder, display):
     display.EraseAll()
 
 
-def main(max_parts=None, output_folder="output_data", filter_category=None):
+def main(max_parts=None, output_folder="output_data", filter_category=None, input_folder="input_data"):
     """
     Process STEP files found under the input_data directory, stopping after
     max_parts files if specified.
@@ -136,6 +136,7 @@ def main(max_parts=None, output_folder="output_data", filter_category=None):
         max_parts: Maximum number of STEP files to process (None = all)
         output_folder: Output folder for generated images
         filter_category: Optional category name to filter by (None = no filtering)
+        input_folder: Input folder containing STEP files (default: "input_data")
     """
     os.makedirs(output_folder, exist_ok=True)
 
@@ -143,8 +144,8 @@ def main(max_parts=None, output_folder="output_data", filter_category=None):
     display, start_display, _, _ = init_display()
     display.set_bg_gradient_color([255, 255, 255], [255, 255, 255])
 
-    # Get the input_data folder path
-    input_data_folder = os.path.join(os.path.dirname(__file__), "input_data")
+    # Get the input folder path
+    input_data_folder = os.path.join(os.path.dirname(__file__), input_folder)
     if not os.path.exists(input_data_folder):
         print(f"Input data folder not found: {input_data_folder}")
         return
@@ -209,5 +210,7 @@ if __name__ == '__main__':
                         help="Optional category filter (e.g., 'Mechanical Engineering'). "
                              "If specified, only processes STEP files from assemblies with this category. "
                              "If omitted, all STEP files are processed.")
+    parser.add_argument("-i", "--input-folder", type=str, default="input_data",
+                        help="Input folder containing STEP files (default: input_data)")
     args = parser.parse_args()
-    main(max_parts=args.num_parts, output_folder=args.output_folder, filter_category=args.category)
+    main(max_parts=args.num_parts, output_folder=args.output_folder, filter_category=args.category, input_folder=args.input_folder)
