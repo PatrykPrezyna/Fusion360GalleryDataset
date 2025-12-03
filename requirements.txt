@@ -108,3 +108,4 @@ zipp
 matplotlib
 torch
 torchvision
+transformers

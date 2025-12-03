@@ -150,5 +150,6 @@ python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion3
 
 1) Than you can test the score for each of them and document 
 ```bash
-python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 100
+
 ```
