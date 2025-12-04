@@ -148,8 +148,81 @@ Here are some test you might want to do:
 python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2/new"
 ```
 
-1) Than you can test the score for each of them and document 
+
+After initial Installation:
+   ```bash
+   conda activate fusion360
+   ```
+
+RETRIVE:
+___
+VAE
 ```bash
-python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 100
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10
 
 ```
+
+___
+CLIP
+```bash
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png" --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 20  --cache-embeddings "embeddings.pt"  --cache-paths "image_paths.txt"
+```
+
+___
+DINOv2
+```bash
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+```
+
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\5e7e13c6-05f8-11ec-ba61-0a34f52892d9_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\61c2nwL8a-L.jpg"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+
+
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Screenshot 2025-12-03 234217.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+
+
+other example with the DINOv2 model
+
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\5e7e13c6-05f8-11ec-ba61-0a34f52892d9_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
+
+
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
+
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
+
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\2c419f18-05b8-11ec-916a-061e4e83ef1b_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
+
+
+
+Summary
+Created explain_image_retrieval_shap.py to explain image retrieval using SHAP. It:
+Retrieves similar images using the trained VAE model (like retrieve_similar_images.py)
+Uses SHAP Partition explainer to identify which pixels/features contribute to similarity
+Visualizes the explanations showing:
+The query image
+The retrieved similar image
+SHAP heatmap highlighting important pixels (red = increases similarity, blue = decreases)
+Features:
+SHAP Integration: Uses SHAP's Partition explainer with blur masking (similar to the MobileNetV2 example)
+Similarity Function: Creates a function that computes cosine similarity between embeddings, compatible with SHAP's masking
+Visualization: Creates a 3-panel visualization showing query, retrieved image, and SHAP explanation
+Flexible Options: Can explain one or all top-k retrieved images
+Error Handling: Handles missing SHAP installation gracefully
+Usage:
+
+# Basic usage - explain the top retrieved image
+python explain_image_retrieval_shap.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 3
+
+# Explain all top-k images
+python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --top-k 3 --explain-all
+
+# Save visualization
+python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --save "explanation.png"
+
+# Adjust SHAP evaluation parameters (more evals = more accurate but slower)
+python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --max-evals 2000

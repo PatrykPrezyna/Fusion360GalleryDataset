@@ -192,6 +192,10 @@ def train_vae(
     print(f"Training VAE with {train_size} images (train), {test_size} images (test)...")
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
     
+    # Track losses per epoch
+    train_losses = []
+    test_losses = []
+    
     # Training loop
     for epoch in range(1, epochs + 1):
         model.train()
@@ -213,6 +217,7 @@ def train_vae(
             num_train_batches += 1
         
         avg_train_loss = total_train_loss / train_size
+        train_losses.append(avg_train_loss)
         
         # Evaluation on test set
         model.eval()
@@ -225,6 +230,7 @@ def train_vae(
                 total_test_loss += loss.item()
         
         avg_test_loss = total_test_loss / max(test_size, 1)
+        test_losses.append(avg_test_loss)
         print(f"Epoch {epoch}/{epochs} - Train loss: {avg_train_loss:.4f} - Test loss: {avg_test_loss:.4f}")
     
     # Save model
@@ -312,10 +318,16 @@ def train_vae(
         "test_size": test_size,
         "device": str(device),
         "test_subfolder": test_dir if len(test_indices_set) > 0 else None,
+        "train_losses": train_losses,
+        "test_losses": test_losses,
     }
     info_path = os.path.join(output_dir, "info.json")
     with open(info_path, "w") as f:
         json.dump(info, f, indent=4)
+    
+    # Also save losses as a separate numpy file for easy loading
+    losses_path = os.path.join(output_dir, "losses.npz")
+    np.savez(losses_path, train_losses=train_losses, test_losses=test_losses)
 
     print(f"Saved embeddings to {emb_path}")
     print(f"Saved image paths to {paths_path}")

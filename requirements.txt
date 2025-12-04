@@ -109,3 +109,4 @@ matplotlib
 torch
 torchvision
 transformers
+shap
