@@ -175,7 +175,7 @@ def main():
     
     for i, (path, similarity, is_match) in enumerate(flagged_results, 1):
         match_flag = " [MATCH]" if is_match else ""
-        print(f"{i}. {os.path.basename(path)} (similarity: {similarity:.4f}){match_flag}")
+        print(f"{i}. {os.path.basename(path)} ({similarity:.4f}){match_flag}")
         print(f"   Full path: {path}")
     
     # Display images visually
@@ -249,7 +249,7 @@ def display_retrieval_results(query_image_path: str, results: list, save_path: s
                 title_color = 'black'
                 match_text = ""
             
-            ax.set_title(f"#{idx}\nSimilarity: {similarity:.3f}{match_text}",
+            ax.set_title(f"#{idx}\n: {similarity:.3f}{match_text}",
                          fontsize=10, pad=5, color=title_color,
                          fontweight='bold' if is_match else 'normal')
             ax.axis('off')
