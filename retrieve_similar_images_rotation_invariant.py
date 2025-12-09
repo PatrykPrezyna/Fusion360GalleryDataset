@@ -369,11 +369,15 @@ def display_retrieval_results(query_image_path: str, results: list, save_path: s
     
     # Load and display similar images
     for idx, result in enumerate(results, 1):
-        if len(result) == 3:
+        if len(result) == 4:
+            img_path, similarity, is_match, match_rank = result
+        elif len(result) == 3:
             img_path, similarity, is_match = result
+            match_rank = None
         else:
             img_path, similarity = result
             is_match = False
+            match_rank = None
         
         try:
             img = Image.open(img_path).convert("RGB")
@@ -607,15 +611,73 @@ Rotation Augmentation:
             relevant_paths_set.add(path)
     total_relevant = len(relevant_paths_set)
     
-    # Flag images that match the query base ID
+    # Compute full rankings to get match ranks
+    from PIL import Image as PILImage
+    
+    # Extract query embedding again for full ranking (same method as in retrieve_similar_images)
+    query_img = PILImage.open(args.query).convert("RGB")
+    if args.rotation_aug:
+        query_embedding = extract_embedding_with_rotation_augmentation(
+            model, processor, query_img, args.model, device, args.num_rotations
+        )
+    else:
+        if args.model == "dinov2":
+            query_embedding = extract_embedding_dinov2(model, processor, query_img, device)
+        elif args.model == "clip":
+            query_embedding = extract_embedding_clip(model, processor, query_img, device)
+        elif args.model == "resnet50":
+            query_embedding = extract_embedding_resnet(model, processor, query_img, device)
+    
+    # Compute cosine similarities for all images
+    embeddings_device = embeddings.to(device)
+    all_similarities = (embeddings_device @ query_embedding.t()).squeeze(1)
+    
+    # Sort all similarities to get full rankings
+    sorted_indices = torch.argsort(all_similarities, descending=True)
+    query_path_norm = os.path.normpath(args.query)
+    
+    # Create a mapping of path -> rank (1-indexed, excluding query itself)
+    # Also collect all matches with their similarities
+    path_to_rank = {}
+    all_matches = []  # List of (path, similarity, rank) for all matches
+    rank = 1
+    for idx in sorted_indices:
+        path = image_paths[idx.item()]
+        path_norm = os.path.normpath(path)
+        # Skip if it's the same image
+        if path_norm != query_path_norm:
+            path_to_rank[path] = rank
+            similarity_val = all_similarities[idx.item()].item()
+            result_base_id = extract_base_id(path)
+            if result_base_id == query_base_id:
+                all_matches.append((path, similarity_val, rank))
+            rank += 1
+    
+    # Flag images that match the query base ID and add their rank
     flagged_results = []
     for path, similarity in results:
         result_base_id = extract_base_id(path)
         is_match = (result_base_id == query_base_id)
-        flagged_results.append((path, similarity, is_match))
+        match_rank = path_to_rank.get(path, None) if is_match else None
+        flagged_results.append((path, similarity, is_match, match_rank))
+    
+    # Check if any match is outside rank 10 - if so, NDCG should be 0
+    has_match_outside_rank_10 = any(
+        is_match and match_rank is not None and match_rank > 10
+        for _, _, is_match, match_rank in flagged_results
+    )
+    
+    # Also check all_matches for any match outside rank 10
+    if not has_match_outside_rank_10:
+        has_match_outside_rank_10 = any(
+            rank > 10 for _, _, rank in all_matches
+        )
     
     # Calculate NDCG@k
-    ndcg_score = calculate_ndcg_at_k(flagged_results, total_relevant, args.top_k)
+    if has_match_outside_rank_10:
+        ndcg_score = 0.0
+    else:
+        ndcg_score = calculate_ndcg_at_k(flagged_results, total_relevant, args.top_k)
     
     # Display results
     print(f"\nTop {len(results)} most similar images:")
@@ -624,8 +686,13 @@ Rotation Augmentation:
     print(f"NDCG@{args.top_k}: {ndcg_score:.4f}")
     print("-" * 60)
     
-    for i, (path, similarity, is_match) in enumerate(flagged_results, 1):
-        match_flag = " [MATCH]" if is_match else ""
+    for i, result in enumerate(flagged_results, 1):
+        if len(result) == 4:
+            path, similarity, is_match, match_rank = result
+        else:
+            path, similarity, is_match = result
+            match_rank = None
+        match_flag = f" [MATCH rank:{match_rank}]" if is_match and match_rank else (" [MATCH]" if is_match else "")
         print(f"{i}. {os.path.basename(path)} ({similarity:.4f}){match_flag}")
         print(f"   Full path: {path}")
     

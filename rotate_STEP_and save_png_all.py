@@ -20,7 +20,7 @@ STANDARD_ROTATIONS = [
     ([], "isometric"),                           # Isometric view (no rotation - default view)
     # Standard orthogonal views - all six sides
     # Note: "front" is the same as isometric (default view), so we use orthogonal rotations for other sides
-    ([(30, gp_Dir(1, 1, 1))], "left_10_degre_x_zero_y"),           # Left side: rotate 90° around Y-axis
+    ([(90, gp_Dir(0, 0, 1))], "_60_x_0_y_0_z")   # Left side: rotate 90° around Y-axis
     # ([(180, gp_Dir(0, 1, 0))], "back"),          # Back view: rotate 180° around Y-axis
     # ([(270, gp_Dir(0, 1, 0))], "right"),         # Right side: rotate 270° around Y-axis
     # ([(90, gp_Dir(1, 0, 0))], "top"),            # Top view: rotate 90° around X-axis

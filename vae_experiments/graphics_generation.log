@@ -1,0 +1,8 @@
+Starting graphics generation...
+Loaded: vae_baseline
+Loaded: vae_small_latent
+Loaded: vae_large_latent
+Loaded: vae_low_beta
+Loaded: vae_high_beta
+Loaded: vae_low_lr
+Loaded: vae_rotation_baseline

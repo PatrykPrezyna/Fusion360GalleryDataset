@@ -1,0 +1,105 @@
+---
+
+## DINOv2 Hyperparameters Explanation
+
+### 1. `--model-variant`
+
+**What it does:** Controls the size and capacity of the DINOv2 model. Larger models have more parameters and higher-dimensional embeddings, which generally improve accuracy but require more computation and memory.
+
+**Available Options:**
+- `small`: 21M parameters, 384-dim embeddings
+- `base`: 86M parameters, 768-dim embeddings (default)
+- `large`: 300M parameters, 1024-dim embeddings
+- `giant`: 1.1B parameters, 1536-dim embeddings
+
+**Expected Results & Consequences:**
+
+| Variant | Speed | Memory | Accuracy | Best For |
+|---------|-------|--------|---------|----------|
+| `small` | Fastest | Low (~1GB GPU) | Baseline | Quick experiments, limited resources |
+| `base` | Fast | Medium (~2GB GPU) | Good balance | **Recommended starting point** |
+| `large` | Slower (~50-70% slower than base) | High (~4GB GPU) | +3-8% better | When accuracy is critical |
+| `giant` | Slowest (~2x slower than base) | Very High (~8GB GPU) | +5-12% better | Final evaluations only |
+
+**Consequences:**
+- **Speed:** Each step up roughly doubles processing time
+- **Memory:** Larger models require more GPU RAM
+- **Accuracy:** Diminishing returns - large→giant gives only 2-4% improvement
+- **Cache compatibility:** Embeddings from different variants are incompatible (different dimensions)
+
+**Recommendation:** Start with `base`, only upgrade to `large` if accuracy is insufficient and you have GPU resources.
+
+---
+
+### 2. `--pooling-strategy`
+
+**What it does:** Controls how DINOv2's patch-level features are aggregated into a single image embedding. Different strategies emphasize different aspects of the image.
+
+**Available Options:**
+- `cls`: Uses only the CLS (classification) token - the first token that summarizes the entire image
+- `mean`: Averages all patch tokens (excludes CLS token)
+- `cls+mean`: Concatenates CLS token + mean of patches (doubles embedding size)
+- `weighted_mean`: Center-weighted average (higher weight for central patches)
+- `max`: Max pooling across all patch tokens
+
+**Expected Results & Consequences:**
+
+| Strategy | Embedding Size | Speed | Best For | Expected Improvement |
+|----------|---------------|-------|----------|---------------------|
+| `cls` | 768 (base) | Fastest | Semantic similarity, general features | Baseline (default) |
+| `mean` | 768 (base) | Fast | **Geometric shapes, rotated views, CAD parts** | +2-5% for geometric retrieval |
+| `cls+mean` | 1536 (base) | Slower | Rich feature representation | +3-7% overall, but slower |
+| `weighted_mean` | 768 (base) | Fast | CAD parts with central focus | +2-4% for centered objects |
+| `max` | 768 (base) | Fast | Prominent features only | Often worse, rarely recommended |
+
+**Consequences:**
+- **Embedding size:** `cls+mean` doubles the size (affects memory and cache)
+- **Speed:** `cls+mean` is slower due to larger embeddings
+- **Cache compatibility:** Different pooling strategies create incompatible embeddings
+- **Best for CAD:** `mean` or `weighted_mean` often work better than `cls` for geometric shapes
+
+**Recommendation:** For CAD part retrieval, try `mean` first - it often outperforms `cls` for geometric/structural features.
+
+---
+
+### 3. `--temperature`
+
+**What it does:** Applies temperature scaling to similarity scores. This doesn't change the ranking order, but affects how "confident" or "peaked" the score distribution is.
+
+**Available Options:** Any positive float value
+- Default: `1.0` (no scaling)
+
+**Expected Results & Consequences:**
+
+| Temperature | Effect | Score Distribution | Use Case | Consequences |
+|-------------|--------|-------------------|----------|--------------|
+| `0.5-0.7` | Very sharp | Top-1 dominates, others very low | Clear, distinct objects | Top match very confident, less diversity in top-k |
+| `0.8-0.9` | Moderately sharp | Top matches more distinct | Standard retrieval | Slight improvement in ranking quality |
+| `1.0` | No scaling | Natural distribution | **Baseline (default)** | No change from model output |
+| `1.2-1.5` | Softer | More uniform scores | Diverse results needed | More balanced rankings, less distinction |
+| `2.0+` | Very soft | Almost uniform | Exploratory search | Little distinction between matches |
+
+**How it works:**
+- Formula: `scaled_similarity = similarity / temperature`
+- Lower temperature (< 1.0): Divides by smaller number → larger differences → sharper distribution
+- Higher temperature (> 1.0): Divides by larger number → smaller differences → softer distribution
+
+**Consequences:**
+- **Does NOT change ranking order** - only affects score magnitudes
+- **Lower values (0.7-0.9):** Make top matches stand out more, useful when you have high confidence
+- **Higher values (1.2-1.5):** Make results more diverse, useful for exploratory search
+- **Extreme values (< 0.5 or > 2.0):** Usually not beneficial
+
+**Recommendation:** Start with `1.0`. If top matches have very similar scores and you want more distinction, try `0.8`. If you need more diverse results, try `1.2`.
+
+---
+
+## Quick Tuning Strategy
+
+1. **Start with defaults:** `--model-variant base --pooling-strategy cls --temperature 1.0`
+2. **For CAD/geometric retrieval:** Try `--pooling-strategy mean` (often better)
+3. **If accuracy insufficient:** Try `--model-variant large` (expect +3-8% improvement, ~50% slower)
+4. **If top matches unclear:** Try `--temperature 0.8` (sharper scores)
+5. **Compare results:** Use `--benchmark` flag to track NDCG@k scores across configurations
+
+**Important:** When changing model variant or pooling strategy, you may need to delete cached embeddings and recompute them, as embeddings from different configurations are incompatible.

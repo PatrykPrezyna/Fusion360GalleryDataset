@@ -1,0 +1,26 @@
+Training Time Summary
+==================================================
+Total training time: 43759.19 seconds
+Total training time: 729.32 minutes
+Total training time: 12.16 hours
+Average time per epoch: 2917.28 seconds
+Number of epochs: 15
+Training start time: 2025-12-06 00:21:03
+Training end time: 2025-12-06 12:37:57
+
+Per-epoch times:
+  Epoch 1: 1441.10 seconds
+  Epoch 2: 20890.38 seconds
+  Epoch 3: 5824.08 seconds
+  Epoch 4: 601.46 seconds
+  Epoch 5: 598.19 seconds
+  Epoch 6: 601.36 seconds
+  Epoch 7: 601.50 seconds
+  Epoch 8: 603.26 seconds
+  Epoch 9: 606.13 seconds
+  Epoch 10: 604.83 seconds
+  Epoch 11: 604.32 seconds
+  Epoch 12: 609.09 seconds
+  Epoch 13: 6195.04 seconds
+  Epoch 14: 1675.86 seconds
+  Epoch 15: 2302.60 seconds

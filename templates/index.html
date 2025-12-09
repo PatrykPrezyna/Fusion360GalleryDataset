@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Retrieval - VAE & DINO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #032d60 0%, #0b5cab 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #0b5cab;
+            background: #e6f2ff;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input:hover {
+            border-color: #0b5cab;
+        }
+
+        .file-input:focus {
+            outline: none;
+            border-color: #0b5cab;
+            box-shadow: 0 0 0 3px rgba(11, 92, 171, 0.1);
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            margin-top: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .preview-image.show {
+            display: block;
+        }
+
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:hover {
+            border-color: #0b5cab;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #0b5cab;
+            box-shadow: 0 0 0 3px rgba(11, 92, 171, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #0b5cab;
+            box-shadow: 0 0 0 3px rgba(11, 92, 171, 0.1);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #032d60 0%, #0b5cab 100%);
+            color: white;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(11, 92, 171, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0b5cab;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 40px;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .results-title {
+            font-size: 1.8em;
+            color: #333;
+        }
+
+        .results-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .result-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #dee2e6;
+        }
+
+        .result-panel h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .result-panel.error {
+            background: #fff5f5;
+            border-color: #fc8181;
+        }
+
+        .result-panel.error h3 {
+            color: #c53030;
+        }
+
+        .result-panel.error .error-message {
+            color: #c53030;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .result-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .result-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .result-item-info {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .result-item-title {
+            font-size: 0.85em;
+            color: #333;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+
+        .result-item-similarity {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #0b5cab;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .method-option {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .method-option:hover {
+            border-color: #0b5cab;
+            background: #e6f2ff;
+        }
+
+        .method-option.active {
+            border-color: #0b5cab;
+            background: #0b5cab;
+            color: white;
+        }
+
+        .method-option input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Linking Physical Legacy Parts to Proprietary CAD Databases</h1>
+        <p class="subtitle">Search for similar images using VAE and DINO models</p>
+
+        <div class="upload-section">
+            <form id="retrievalForm">
+                <div class="form-group">
+                    <label for="queryImage">Query Image</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="queryImage" name="queryImage" accept="image/*" class="file-input" required>
+                    </div>
+                    <img id="preview" class="preview-image" alt="Preview">
+                </div>
+
+                <div class="form-group">
+                    <label for="poolSelect">Part library</label>
+                    <select id="poolSelect" name="poolSelect" required>
+                        <option value="">Loading pools...</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary" id="refreshPools" style="margin-top: 10px; width: auto;">
+                        🔄 Refresh Pools
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Retrieval Method</label>
+                    <div class="method-selector">
+                        <label class="method-option active" id="method-both">
+                            <input type="radio" name="method" value="both" checked> Both (VAE + DINO)
+                        </label>
+                        <label class="method-option" id="method-vae">
+                            <input type="radio" name="method" value="vae"> VAE Only
+                        </label>
+                        <label class="method-option" id="method-dino">
+                            <input type="radio" name="method" value="dino"> DINO Only
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="topK">Number of Results (Top-K)</label>
+                    <div class="input-group">
+                        <input type="number" id="topK" name="topK" value="10" min="1" max="50" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="searchBtn">
+                    🔍 Search Similar Images
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing your query... This may take a moment.</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="results-header">
+                <h2 class="results-title">Retrieval Results</h2>
+                <div class="results-meta" id="resultsMeta"></div>
+            </div>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Preview uploaded image
+        document.getElementById('queryImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('preview');
+                    preview.src = e.target.result;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Load pools on page load
+        async function loadPools() {
+            try {
+                const response = await fetch('/api/pools');
+                const data = await response.json();
+                const select = document.getElementById('poolSelect');
+                select.innerHTML = '<option value="">Select a pool...</option>';
+                
+                if (data.pools && data.pools.length > 0) {
+                    data.pools.forEach(pool => {
+                        const option = document.createElement('option');
+                        option.value = pool.path;
+                        option.textContent = `${pool.name} (${pool.image_count} images)`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No pools found. Add directories to output_data folder.</option>';
+                }
+            } catch (error) {
+                console.error('Error loading pools:', error);
+                document.getElementById('poolSelect').innerHTML = '<option value="">Error loading pools</option>';
+            }
+        }
+
+        // Refresh pools button
+        document.getElementById('refreshPools').addEventListener('click', loadPools);
+
+        // Method selector
+        document.querySelectorAll('input[name="method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.method-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                document.getElementById(`method-${this.value}`).classList.add('active');
+            });
+        });
+
+        // Form submission
+        document.getElementById('retrievalForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const queryFile = document.getElementById('queryImage').files[0];
+            const poolDir = document.getElementById('poolSelect').value;
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const topK = parseInt(document.getElementById('topK').value);
+
+            if (!queryFile || !poolDir) {
+                alert('Please select a query image and pool directory');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('searchBtn').disabled = true;
+
+            try {
+                // Upload query image
+                const formData = new FormData();
+                formData.append('file', queryFile);
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadData = await uploadResponse.json();
+
+                if (!uploadData.success) {
+                    throw new Error(uploadData.error || 'Upload failed');
+                }
+
+                // Run retrieval
+                const retrieveResponse = await fetch('/api/retrieve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query_path: uploadData.path,
+                        pool_dir: poolDir,
+                        method: method,
+                        top_k: topK
+                    })
+                });
+
+                const retrieveData = await retrieveResponse.json();
+
+                if (retrieveData.error) {
+                    throw new Error(retrieveData.error);
+                }
+
+                // Display results
+                displayResults(retrieveData, method);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('searchBtn').disabled = false;
+            }
+        });
+
+        function displayResults(data, method) {
+            const resultsDiv = document.getElementById('results');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const resultsMeta = document.getElementById('resultsMeta');
+
+            resultsGrid.innerHTML = '';
+            
+            // Update metadata
+            const elapsed = data.elapsed_time ? data.elapsed_time.toFixed(2) : 'N/A';
+            const device = data.device || 'cpu';
+            resultsMeta.textContent = `Time: ${elapsed}s | Device: ${device.toUpperCase()}`;
+
+            // Display VAE results
+            if (method === 'both' || method === 'vae') {
+                const vaePanel = createResultPanel('VAE Results', data.vae, 'vae');
+                resultsGrid.appendChild(vaePanel);
+            }
+
+            // Display DINO results
+            if (method === 'both' || method === 'dino') {
+                const dinoPanel = createResultPanel('DINO Results', data.dino, 'dino');
+                resultsGrid.appendChild(dinoPanel);
+            }
+
+            resultsDiv.classList.add('show');
+        }
+
+        function createResultPanel(title, data, modelType) {
+            const panel = document.createElement('div');
+            panel.className = 'result-panel';
+
+            const h3 = document.createElement('h3');
+            h3.textContent = title;
+            panel.appendChild(h3);
+
+            if (data.error) {
+                panel.classList.add('error');
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = data.error;
+                panel.appendChild(errorMsg);
+                return panel;
+            }
+
+            if (!data.results || data.results.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'No results found';
+                panel.appendChild(empty);
+                return panel;
+            }
+
+            const imagesDiv = document.createElement('div');
+            imagesDiv.className = 'result-images';
+
+            data.results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+
+                const img = document.createElement('img');
+                // Normalize path and encode for URL
+                let normalizedPath = result.path.replace(/\\/g, '/');
+                // Ensure proper URL encoding
+                const imageUrl = `/api/image/${encodeURIComponent(normalizedPath)}`;
+                img.src = imageUrl;
+                img.alt = result.filename;
+                img.onerror = function() {
+                    this.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">Image not found</text></svg>';
+                };
+
+                const info = document.createElement('div');
+                info.className = 'result-item-info';
+
+                const title = document.createElement('div');
+                title.className = 'result-item-title';
+                title.textContent = `#${index + 1}: ${result.filename}`;
+                title.title = result.filename;
+
+                const similarity = document.createElement('div');
+                similarity.className = 'result-item-similarity';
+                similarity.textContent = `Similarity: ${result.similarity.toFixed(4)}`;
+
+                info.appendChild(title);
+                info.appendChild(similarity);
+                item.appendChild(img);
+                item.appendChild(info);
+                imagesDiv.appendChild(item);
+            });
+
+            panel.appendChild(imagesDiv);
+            return panel;
+        }
+
+        // Initialize
+        loadPools();
+    </script>
+</body>
+</html>

@@ -83,7 +83,12 @@ python "rotate_STEP_and save_png_all.py" -n 5 --category "Mechanical Engineering
 
 ```bash
 # Process STEP files from a custom input folder (default is "input_data")
-python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2/new"
+python "rotate_STEP_and save_png_all.py" --input-folder "C:\sources\Fusion360GalleryDataset\output_data\test_query\R1" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\test_query\R1\new"
+```
+
+```bash
+# Process STEP files from a custom input folder (default is "input_data")
+python "rotate_STEP_and save_png_all.py"  --input-folder "C:\sources\Fusion360GalleryDataset\output_data\nut_14_views" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\nut_14_views/new"
 ```
 
 **Parameters:**
@@ -91,6 +96,17 @@ python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion3
 - `-o, --output-folder`: Output folder to save the images (default: `"output_data"`)
 - `-i, --input-folder`: Input folder containing STEP files (default: `"input_data"`)
 - `-c, --category`: Optional category filter (e.g., 'Mechanical Engineering'). If specified, only processes STEP files from assemblies with this category. If omitted, all STEP files are processed.
+
+**Key Python Libraries Used:**
+- **OpenCascade (pythonocc-core)**: The main library for handling 3D CAD files. It provides:
+  - `read_step_file()`: Loads STEP files into 3D geometry objects
+  - `init_display()`: Creates a 3D rendering window/viewer
+  - `BRepBuilderAPI_Transform`: Performs 3D rotations and transformations
+  - `gp_Trsf`, `gp_Ax1`, `gp_Dir`: Geometry primitives for defining rotation axes and transformations
+- **Pillow (PIL)**: Image processing library used to:
+  - Convert rendered images to grayscale (`img.convert('L')`)
+  - Resize images to a standardized size (515x512 pixels) using high-quality resampling
+- **Standard libraries**: `os` (file system operations), `json` (reading assembly metadata), `argparse` (command-line arguments), `math` (rotation calculations)
 
 ### (optional) Train the VAE
 
@@ -145,84 +161,130 @@ Here are some test you might want to do:
 
 0) You can use this script to rotete the query images
 ```bash
-python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query_2/new"
+python "rotate_STEP_and save_png_all.py" -n 5 --input-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query\oryginal_images" --output-folder "C:\sources\Fusion360GalleryDataset\output_data\Test_query\R2"
 ```
 
 
 After initial Installation:
-   ```bash
-   conda activate fusion360
-   ```
+```bash
+conda activate fusion360
+```
 
 RETRIVE:
 ___
 VAE
 ```bash
-python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\R2" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10
+
+```
+
+___
+VAE with rotations
+```bash
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\R1" --output-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_200" --top-k 10
 
 ```
 
 ___
 CLIP
 ```bash
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png" --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 20  --cache-embeddings "embeddings.pt"  --cache-paths "image_paths.txt"
+python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos" --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10  --cache-embeddings "embeddings.pt"  --cache-paths "image_paths.txt"
 ```
 
 ___
 DINOv2
 ```bash
-python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt"
 ```
 
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\5e7e13c6-05f8-11ec-ba61-0a34f52892d9_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt"
 
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_14_views.pt" --cache-paths "image_paths.txt"
 
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+```bash
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2_1_1"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_14_views.pt" --cache-paths "image_paths.txt"
+```
 
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\61c2nwL8a-L.jpg"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
+explainability
 
-
-python retrieve_similar_images_use_pretrained_model.py --query "C:\sources\Fusion360GalleryDataset\output_data\Screenshot 2025-12-03 234217.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings.pt"    --cache-paths "image_paths.txt"
-
-
-other example with the DINOv2 model
-
-python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\5e7e13c6-05f8-11ec-ba61-0a34f52892d9_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
-
-
-python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\98128fa4-0550-11ec-b4fe-0ac51587b959_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
-
-python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
-
-python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\2c419f18-05b8-11ec-916a-061e4e83ef1b_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 10  --cache-embeddings "embeddings_dinov2.pt"    --cache-paths "image_paths.txt"
+python visualize_similarity_explainability.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2\865ce94a-0545-11ec-a85e-020a4e46e3ef__foto_4.jpeg" --target "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views\865ce94a-0545-11ec-a85e-020a4e46e3ef_back_01.png" --output "explainability_result.png"
 
 
 
-Summary
-Created explain_image_retrieval_shap.py to explain image retrieval using SHAP. It:
-Retrieves similar images using the trained VAE model (like retrieve_similar_images.py)
-Uses SHAP Partition explainer to identify which pixels/features contribute to similarity
-Visualizes the explanations showing:
-The query image
-The retrieved similar image
-SHAP heatmap highlighting important pixels (red = increases similarity, blue = decreases)
-Features:
-SHAP Integration: Uses SHAP's Partition explainer with blur masking (similar to the MobileNetV2 example)
-Similarity Function: Creates a function that computes cosine similarity between embeddings, compatible with SHAP's masking
-Visualization: Creates a 3-panel visualization showing query, retrieved image, and SHAP explanation
-Flexible Options: Can explain one or all top-k retrieved images
-Error Handling: Handles missing SHAP installation gracefully
-Usage:
+now here with creating a centroid
+```bash
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt"
+```
 
-# Basic usage - explain the top retrieved image
-python explain_image_retrieval_shap.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\b216e6e8-0570-11ec-a7b8-0ae0e5d97f29_left_10_degre_x_zero_y_01.png"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool copy" --top-k 3
+```bash
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_14_views.pt" --cache-paths "image_paths.txt"
+```
 
-# Explain all top-k images
-python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --top-k 3 --explain-all
 
-# Save visualization
-python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --save "explanation.png"
 
-# Adjust SHAP evaluation parameters (more evals = more accurate but slower)
-python explain_image_retrieval_shap.py --query "path/to/image.png" --output-dir "vae_retrieval_output" --max-evals 2000
+```bash
+python retrieve_similar_images_use_pretrained_model_dinov2.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\rendering_front"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\14_views_10000_mechanical" --top-k 10  --cache-embeddings "embeddings_dinov2_14_views_10000_mechanical.pt" --cache-paths "image_paths.txt"
+```
+
+
+
+```bash
+python train_vae_image_retrieval_rotations.py     --train-folder output_data/14_views_10000_mechanical 
+    --test-folder output_data/14_views_10000_mechanical/test 
+    --epochs 30 
+    --contrastive-weight 0.1
+```
+
+do it in bathces
+
+```bash
+python batch_retrieve_similar_images.py --query-folder "output_data/Test_query/R1" --output-dir "output_data/Test_pool_VAE_with_rotations_1p" --top-k 10 --method vae
+```
+
+python train_vae_image_retrieval_rotations.py 
+    --train-folder "output_data/14_views_10000_mechanical" 
+    --test-folder "output_data/14_views_10000_mechanical/test" 
+    --output-dir "output_data/vae_quick_test" 
+    --epochs 10 
+    --batch-size 32 
+    --data-percentage 0.5 
+    --random-seed 42
+
+
+    final 
+
+
+1_1
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid_1_to_many.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2_1_1"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt"
+
+
+
+1_4
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid_1_to_many.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2_1_1"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_14_views.pt" --cache-paths "image_paths.txt"
+
+4_1
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt"
+
+    4_4
+    python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_14_views" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_14_views.pt" --cache-paths "image_paths.txt"
+
+
+1_1 VAE
+
+python retrieve_similar_images.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\R1"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool" --top-k 10  --cache-embeddings "embeddings_vea.pt" --cache-paths "image_paths.txt"
+
+hyper
+
+1_1
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid_hyper.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINO_250" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt" --pooling-strategy weighted_mean
+
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid_hyper.py --query "C:\sources\Fusion360GalleryDataset\output_data\Test_query\fotos_2"     --image-dir "C:\sources\Fusion360GalleryDataset\output_data\Test_pool_DINOs" --top-k 10  --cache-embeddings "embeddings_dinov2_Test_pool_DINO_250.pt" --cache-paths "image_paths.txt" --image-size 256 
+
+python retrieve_similar_images_use_pretrained_model_dinov2_centroid.py \
+    --query "path/to/queries" \
+    --image-dir "path/to/pool" \
+    --model-variant large \
+    --pooling-strategy weighted_mean \
+    --temperature 0.8 \
+    --batch-size 64 \
+    --top-k 10
